@@ -25,7 +25,6 @@ enum SettingsSection: CaseIterable, Identifiable {
 }
 
 public struct SettingsView: View {
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var selectedSection: SettingsSection = .models
 
     public init() {}
@@ -33,52 +32,54 @@ public struct SettingsView: View {
     public var body: some View {
         HStack(spacing: 0) {
             SettingsSidebar(selection: $selectedSection)
-            Divider()
             VStack(spacing: 0) {
-                contentHeader
-                Divider()
-                ScrollView {
-                    sectionContent
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 24)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
+                SettingsToolbar(title: selectedSection.title)
+                sectionContent
             }
-            .frame(width: 659)
-            .background(Color(nsColor: .windowBackgroundColor).opacity(0.92))
+            .frame(
+                width: SettingsDesignMetrics.contentWidth,
+                height: SettingsDesignMetrics.windowHeight
+            )
+            .background(SettingsPalette.content)
         }
-        .frame(width: 900, height: 568)
-        .background(settingsBackground)
+        .frame(
+            width: SettingsDesignMetrics.windowWidth,
+            height: SettingsDesignMetrics.windowHeight
+        )
+        .background(SettingsPalette.content)
+        .background(SettingsWindowConfigurator(sectionTitle: selectedSection.title))
+        .ignoresSafeArea(.container, edges: .top)
+        .frame(
+            width: SettingsDesignMetrics.windowWidth,
+            height: SettingsDesignMetrics.contentLayoutHeight
+        )
         .preferredColorScheme(.dark)
-    }
-
-    private var contentHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(selectedSection.title)
-                    .font(.headline)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 28)
-        .frame(height: 52)
     }
 
     @ViewBuilder
     private var sectionContent: some View {
         switch selectedSection {
-        case .models: ModelSettingsTab()
-        case .permissions: PermissionsSettingsTab()
-        case .commands: CommandLibraryView()
+        case .models:
+            ModelSettingsTab()
+        case .permissions:
+            settingsScroll { PermissionsSettingsTab() }
+        case .commands:
+            settingsScroll { CommandLibraryView() }
         }
     }
 
-    @ViewBuilder
-    private var settingsBackground: some View {
-        if reduceTransparency {
-            Color(nsColor: .windowBackgroundColor)
-        } else {
-            VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
+    private func settingsScroll<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        ScrollView {
+            content()
+                .padding(.horizontal, 28)
+                .padding(.vertical, 24)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .frame(
+            width: SettingsDesignMetrics.contentWidth,
+            height: SettingsDesignMetrics.contentHeight
+        )
     }
 }
