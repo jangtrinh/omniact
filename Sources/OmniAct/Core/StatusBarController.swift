@@ -122,7 +122,7 @@ public final class StatusBarController: NSObject {
         if AccessibilityService.shared.isAccessibilityGranted {
             let alert = NSAlert()
             alert.messageText = "Accessibility Granted"
-            alert.informativeText = "OmniAct has full accessibility access to read selected text and insert AI responses."
+            alert.informativeText = "macOS reports Accessibility permission enabled for this build. Capture and insertion support depend on the active app."
             alert.alertStyle = .informational
             alert.runModal()
         } else {
