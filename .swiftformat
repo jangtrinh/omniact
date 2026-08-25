@@ -1,0 +1,26 @@
+--swiftversion 6.0
+--indent 4
+--indentcase false
+--maxwidth 120
+--wraparguments beforefirst
+--wrapelements beforefirst
+--closingparen sameline
+--linebreaks lf
+--sortimports true
+--importgrouping testable-bottom
+--allman false
+--self insert
+--stripunusedargs closure
+--closingbrace sameline
+--spaceinsideparens false
+--spacearoundoperators true
+--spacearoundcomments true
+--spaceinside true
+--funcattributes preserve
+--trailingclosures
+--patternlet hoist
+--marktypes always
+--markextensions always
+--asynccapturing
+--acronyms ID,URL,UUID,AX,LLM,HUD
+--exclude .build,.swiftpm,DerivedData,Generated,OmniAct.app,engineer
