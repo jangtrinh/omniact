@@ -17,6 +17,25 @@ private struct KeychainAPIKeyStorage: APIKeyStorage {
     }
 }
 
+private final class TransientAPIKeyStorage: APIKeyStorage, @unchecked Sendable {
+    private let lock = NSLock()
+    private var keys: [String: String] = [:]
+
+    @discardableResult
+    func save(key: String, account: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        keys[account] = key
+        return true
+    }
+
+    func load(account: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return keys[account]
+    }
+}
+
 public final class AppConfig: @unchecked Sendable {
     public static let shared = AppConfig()
 
@@ -25,8 +44,17 @@ public final class AppConfig: @unchecked Sendable {
     private let activeProviderKey = "OmniAct_ActiveProvider"
 
     private init() {
-        userDefaults = .standard
-        keyStorage = KeychainAPIKeyStorage()
+        if ProcessInfo.processInfo.environment["OMNIACT_UI_SMOKE_TEST"] == "1" {
+            let suite = "OmniAct.UISmoke.\(ProcessInfo.processInfo.processIdentifier)"
+            guard let smokeDefaults = UserDefaults(suiteName: suite) else {
+                preconditionFailure("Could not create isolated UI smoke-test defaults")
+            }
+            userDefaults = smokeDefaults
+            keyStorage = TransientAPIKeyStorage()
+        } else {
+            userDefaults = .standard
+            keyStorage = KeychainAPIKeyStorage()
+        }
     }
 
     public init(userDefaults: UserDefaults, keyStorage: any APIKeyStorage) {

@@ -53,16 +53,22 @@ struct CommandLibraryView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Command Library").font(.system(size: 14, weight: .semibold))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Command library")
+                        .font(.headline)
+                    Text("Edit the actions available from the OmniAct HUD.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Add") { model.beginCreate() }.buttonStyle(.borderedProminent)
                 Button("Reset All Factory") { isResettingAll = true }.buttonStyle(.bordered)
             }
             Text("Local only: \(store.directory.path)")
-                .font(.system(size: 10.5, design: .monospaced))
+                .font(.caption.monospaced())
                 .foregroundColor(.secondary)
             Text("Use {text} for selected or typed text and {arg} for text after the command token.")
-                .font(.system(size: 11))
+                .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
@@ -72,7 +78,7 @@ struct CommandLibraryView: View {
         if !store.loadWarnings.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
                 ForEach(store.loadWarnings, id: \.self) { warning in
-                    Text(warning).font(.system(size: 11)).foregroundColor(.orange)
+                    Text(warning).font(.caption).foregroundColor(.orange)
                 }
             }
             .padding(8)

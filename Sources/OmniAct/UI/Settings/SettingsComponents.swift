@@ -1,52 +1,135 @@
 import SwiftUI
 
-struct SettingsTabPill: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
+struct SettingsSidebar: View {
+    @Binding var selection: SettingsSection
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 11))
-                Text(title).font(.system(size: 11.5, weight: isSelected ? .semibold : .regular))
+        VStack(alignment: .leading, spacing: 18) {
+            Text("OMNIACT")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .accessibilityHidden(true)
+            VStack(spacing: 4) {
+                ForEach(SettingsSection.allCases) { section in
+                    navigationButton(for: section)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color.white.opacity(isSelected ? 0.16 : 0.05))
-            .cornerRadius(6)
-            .foregroundColor(isSelected ? .white : .secondary)
+            Spacer()
+            Text("OmniAct 0.1")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 8)
+        }
+        .padding(16)
+        .frame(width: 240)
+        .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
+    }
+
+    private func navigationButton(for section: SettingsSection) -> some View {
+        let isSelected = selection == section
+        return Button {
+            selection = section
+        } label: {
+            HStack(spacing: 11) {
+                Image(systemName: section.icon)
+                    .frame(width: 18)
+                Text(section.title)
+                    .font(.body.weight(isSelected ? .semibold : .regular))
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+            .background(
+                isSelected ? Color.accentColor.opacity(0.22) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(section.title)
         .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Opens \(title) settings")
+        .accessibilityHint("Opens \(section.title) settings")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+}
+
+struct SettingsCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.62))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+        )
     }
 }
 
-struct ProviderSelectPill: View {
+struct SettingsRow<Content: View>: View {
     let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
+    let detail: String?
+    @ViewBuilder let content: Content
+
+    init(title: String, detail: String? = nil, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.detail = detail
+        self.content = content()
+    }
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 10.5))
-                Text(title).font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+        HStack(alignment: .center, spacing: 20) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.body)
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color.white.opacity(isSelected ? 0.18 : 0.06))
-            .clipShape(Capsule())
-            .overlay(Capsule().strokeBorder(Color.white.opacity(isSelected ? 0.3 : 0.1), lineWidth: 0.5))
-            .foregroundColor(isSelected ? .white : .secondary)
+            Spacer(minLength: 16)
+            content
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .padding(.horizontal, 16)
+        .frame(minHeight: 60)
+    }
+}
+
+struct SettingsCallout: View {
+    let icon: String
+    let title: String?
+    let message: String
+
+    init(icon: String, title: String? = nil, message: String) {
+        self.icon = icon
+        self.title = title
+        self.message = message
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .foregroundStyle(Color.accentColor)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                if let title {
+                    Text(title)
+                        .font(.callout.weight(.medium))
+                }
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
     }
 }

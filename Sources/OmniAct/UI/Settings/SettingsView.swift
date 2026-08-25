@@ -1,54 +1,84 @@
 import SwiftUI
 
+enum SettingsSection: CaseIterable, Identifiable {
+    case models
+    case permissions
+    case commands
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .models: "AI Models"
+        case .permissions: "Permissions"
+        case .commands: "Commands"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .models: "cpu"
+        case .permissions: "lock.shield"
+        case .commands: "command"
+        }
+    }
+}
+
 public struct SettingsView: View {
-    @State private var selectedTab = 0
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @State private var selectedSection: SettingsSection = .models
 
     public init() {}
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider().opacity(0.3)
-            ScrollView {
-                tabContent
-                    .padding(20)
+        HStack(spacing: 0) {
+            SettingsSidebar(selection: $selectedSection)
+            Divider()
+            VStack(spacing: 0) {
+                contentHeader
+                Divider()
+                ScrollView {
+                    sectionContent
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 24)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
             }
+            .frame(width: 659)
+            .background(Color(nsColor: .windowBackgroundColor).opacity(0.92))
         }
-        .frame(width: 600, height: 530)
-        .background(VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow))
+        .frame(width: 900, height: 568)
+        .background(settingsBackground)
         .preferredColorScheme(.dark)
     }
 
-    private var header: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.accentColor)
-                Text("OmniAct Preferences")
-                    .font(.system(size: 15, weight: .semibold))
+    private var contentHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(selectedSection.title)
+                    .font(.headline)
             }
             Spacer()
-            HStack(spacing: 4) {
-                SettingsTabPill(title: "AI Models", icon: "cpu", isSelected: selectedTab == 0) { selectedTab = 0 }
-                SettingsTabPill(title: "Permissions", icon: "lock.shield", isSelected: selectedTab == 1) { selectedTab = 1 }
-                SettingsTabPill(title: "Commands", icon: "command", isSelected: selectedTab == 2) { selectedTab = 2 }
-            }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-        .background(Color.white.opacity(0.04))
+        .padding(.horizontal, 28)
+        .frame(height: 52)
     }
 
     @ViewBuilder
-    private var tabContent: some View {
-        switch selectedTab {
-        case 0:
-            ModelSettingsTab()
-        case 1:
-            PermissionsSettingsTab()
-        default:
-            CommandLibraryView()
+    private var sectionContent: some View {
+        switch selectedSection {
+        case .models: ModelSettingsTab()
+        case .permissions: PermissionsSettingsTab()
+        case .commands: CommandLibraryView()
+        }
+    }
+
+    @ViewBuilder
+    private var settingsBackground: some View {
+        if reduceTransparency {
+            Color(nsColor: .windowBackgroundColor)
+        } else {
+            VisualEffectBlur(material: .sidebar, blendingMode: .behindWindow)
         }
     }
 }
