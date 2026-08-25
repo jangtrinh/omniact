@@ -1,6 +1,7 @@
 import XCTest
 @testable import OmniAct
 
+@MainActor
 final class CommandStoreMutationTests: XCTestCase {
     func testCreateUpdateDuplicateEnableReorderAndDeleteCustomCommand() throws {
         let directory = try makeTemporaryCommandDirectory()

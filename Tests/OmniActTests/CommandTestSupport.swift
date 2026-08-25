@@ -31,6 +31,7 @@ func makeCustomCommand(
     )
 }
 
+@MainActor
 final class MutableCommandCatalog: CommandCatalogProviding {
     var resolvedCommands: [SlashCommand]
 

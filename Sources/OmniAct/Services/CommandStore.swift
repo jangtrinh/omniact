@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 
+@MainActor
 public protocol CommandCatalogProviding: AnyObject {
     var resolvedCommands: [SlashCommand] { get }
 }
@@ -10,6 +11,7 @@ public enum CommandStoreError: LocalizedError {
     case factoryCommandRequired
     case customCommandRequired
     case validation([CommandValidationIssue])
+    case fileLimitReached
     case persistence
 
     public var errorDescription: String? {
@@ -22,13 +24,16 @@ public enum CommandStoreError: LocalizedError {
             return "Factory commands cannot be deleted. Reset them instead."
         case .validation(let issues):
             return issues.compactMap(\.errorDescription).joined(separator: " ")
+        case .fileLimitReached:
+            return "The command library already contains the maximum of 64 command files. Repair or remove a command file before adding another."
         case .persistence:
             return "Could not save the command. Check that the command directory is writable."
         }
     }
 }
 
-public final class CommandStore: ObservableObject, CommandCatalogProviding, @unchecked Sendable {
+@MainActor
+public final class CommandStore: ObservableObject, CommandCatalogProviding {
     public static let shared = CommandStore()
 
     @Published public internal(set) var commands: [SlashCommand]
@@ -49,11 +54,11 @@ public final class CommandStore: ObservableObject, CommandCatalogProviding, @unc
     }
 
     public init(
-        directory: URL = CommandStore.defaultDirectory,
+        directory: URL? = nil,
         factoryDefaults: [SlashCommand] = FactoryCommandCatalog.commands,
         fileManager: FileManager = .default
     ) {
-        self.directory = directory
+        self.directory = directory ?? Self.defaultDirectory
         self.factoryDefaults = Self.sorted(factoryDefaults)
         self.fileManager = fileManager
         self.commands = Self.sorted(factoryDefaults)

@@ -6,14 +6,14 @@ public extension CommandStore {
         guard command(withID: draft.id) == nil else { throw CommandStoreError.validation([.duplicateIdentifier]) }
         var command = copy(draft, id: draft.id.isEmpty ? UUID().uuidString.lowercased() : draft.id, origin: .custom)
         command.order = nextOrder()
-        try saveCatalog(commands + [command])
+        try saveCatalog(commands + [command], changedIDs: [command.id])
         return command
     }
 
     func update(_ draft: SlashCommand) throws {
         guard let existing = command(withID: draft.id) else { throw CommandStoreError.commandNotFound }
         let updated = copy(draft, id: existing.id, origin: existing.origin, order: existing.order)
-        try saveCatalog(commands.map { $0.id == existing.id ? updated : $0 })
+        try saveCatalog(commands.map { $0.id == existing.id ? updated : $0 }, changedIDs: [existing.id])
     }
 
     @discardableResult
@@ -50,7 +50,13 @@ public extension CommandStore {
         for index in reordered.indices {
             reordered[index].order = index
         }
-        try saveCatalog(reordered)
+        let changedIDs = Set(reordered.compactMap { command -> String? in
+            guard let existing = commands.first(where: { $0.id == command.id }), existing != command else {
+                return nil
+            }
+            return command.id
+        })
+        try saveCatalog(reordered, changedIDs: changedIDs)
     }
 
     func deleteCustom(id: String) throws {
@@ -78,33 +84,7 @@ public extension CommandStore {
     }
 }
 
-private extension CommandStore {
-    func saveCatalog(_ proposed: [SlashCommand]) throws {
-        let sorted = Self.sorted(proposed)
-        let issues = CommandValidator.validate(sorted)
-        guard issues.isEmpty else { throw CommandStoreError.validation(issues) }
-
-        var nextFiles = loadedFileURLs
-        do {
-            for command in sorted {
-                if command.origin == .factory,
-                   let factory = factoryDefaults.first(where: { $0.id == command.id }),
-                   command == factory {
-                    try CommandStorePersistence.remove(files(for: command.id), fileManager: fileManager)
-                    nextFiles.removeValue(forKey: command.id)
-                } else {
-                    let file = try CommandStorePersistence.write(command, to: directory, fileManager: fileManager)
-                    try CommandStorePersistence.remove(files(for: command.id).filter { $0 != file }, fileManager: fileManager)
-                    nextFiles[command.id] = [file]
-                }
-            }
-        } catch {
-            throw CommandStoreError.persistence
-        }
-        commands = sorted
-        loadedFileURLs = nextFiles
-    }
-
+extension CommandStore {
     func files(for id: String) -> [URL] {
         let deterministic = CommandStorePersistence.fileURL(forID: id, in: directory)
         return (loadedFileURLs[id] ?? []) + [deterministic]

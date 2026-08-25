@@ -2,6 +2,7 @@ import Foundation
 
 public enum CommandValidationIssue: Error, Equatable, Sendable, LocalizedError {
     case emptyIdentifier
+    case identifierTooLong
     case duplicateIdentifier
     case invalidSlashToken
     case emptyTitle
@@ -16,6 +17,8 @@ public enum CommandValidationIssue: Error, Equatable, Sendable, LocalizedError {
         switch self {
         case .emptyIdentifier:
             return "Each command must have a stable ID."
+        case .identifierTooLong:
+            return "Stable IDs must be at most \(CommandValidator.maximumStableIDByteCount) UTF-8 bytes."
         case .duplicateIdentifier:
             return "Each command must have a unique stable ID."
         case .invalidSlashToken:
@@ -39,6 +42,8 @@ public enum CommandValidationIssue: Error, Equatable, Sendable, LocalizedError {
 }
 
 public enum CommandValidator {
+    static let maximumStableIDByteCount = 100
+
     public static func validate(_ commands: [SlashCommand]) -> [CommandValidationIssue] {
         var issues: [CommandValidationIssue] = []
         var identifiers = Set<String>()
@@ -47,6 +52,9 @@ public enum CommandValidator {
         for command in commands {
             if command.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 append(.emptyIdentifier, to: &issues)
+            }
+            if command.id.lengthOfBytes(using: .utf8) > maximumStableIDByteCount {
+                append(.identifierTooLong, to: &issues)
             }
             if !identifiers.insert(command.id).inserted {
                 append(.duplicateIdentifier, to: &issues)

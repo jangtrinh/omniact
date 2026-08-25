@@ -7,9 +7,11 @@ struct CommandLibraryView: View {
     @State private var pendingFactoryReset: SlashCommand?
     @State private var isResettingAll = false
 
-    init(store: CommandStore = .shared) {
-        _store = ObservedObject(wrappedValue: store)
-        _model = StateObject(wrappedValue: CommandLibraryViewModel(store: store))
+    @MainActor
+    init(store: CommandStore? = nil) {
+        let resolvedStore = store ?? CommandStore.shared
+        _store = ObservedObject(wrappedValue: resolvedStore)
+        _model = StateObject(wrappedValue: CommandLibraryViewModel(store: resolvedStore))
     }
 
     var body: some View {

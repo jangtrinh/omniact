@@ -100,7 +100,7 @@ final class CommandLibraryViewModel: ObservableObject {
         if command.origin == .factory {
             return store.isFactoryModified(command) ? "Factory • modified" : "Factory • original"
         }
-        return editingID == nil ? "Custom • unsaved" : "Custom • saved"
+        return store.command(withID: command.id) == nil ? "Custom • unsaved" : "Custom • saved"
     }
 
     func clearValidationErrors() {

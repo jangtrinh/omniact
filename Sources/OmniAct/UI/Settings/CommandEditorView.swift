@@ -16,9 +16,15 @@ struct CommandEditorView: View {
             promptFields
             validationMessages
             HStack {
-                Button("Cancel") { model.cancelEditing() }.buttonStyle(.bordered)
+                Button("Cancel") { model.cancelEditing() }
+                    .buttonStyle(.bordered)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityLabel("Cancel command changes")
                 Spacer()
-                Button("Save") { model.saveDraft() }.buttonStyle(.borderedProminent)
+                Button("Save") { model.saveDraft() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityLabel("Save command")
             }
         }
         .padding(12)
@@ -49,6 +55,8 @@ struct CommandEditorView: View {
                 .padding(4)
                 .background(Color.black.opacity(0.12))
                 .cornerRadius(6)
+                .accessibilityLabel("System prompt")
+                .accessibilityHint("Use {text} for selected or typed text and {arg} for the command argument")
             Text("Prompt template — placeholders: {text}, {arg}")
                 .font(.system(size: 12, weight: .medium)).foregroundColor(.secondary)
             TextEditor(text: stringBinding(\.promptTemplate))
@@ -57,6 +65,8 @@ struct CommandEditorView: View {
                 .padding(4)
                 .background(Color.black.opacity(0.12))
                 .cornerRadius(6)
+                .accessibilityLabel("Prompt template")
+                .accessibilityHint("Use {text} for selected or typed text and {arg} for the command argument")
         }
     }
 
@@ -90,6 +100,7 @@ struct CommandEditorView: View {
             TextField(placeholder, text: aliases ? aliasesBinding : stringBinding(keyPath!))
                 .textFieldStyle(.roundedBorder)
                 .font(.system(size: 12))
+                .accessibilityLabel(title)
         }
     }
 

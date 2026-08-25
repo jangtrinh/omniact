@@ -1,6 +1,7 @@
 import XCTest
 @testable import OmniAct
 
+@MainActor
 final class CommandValidationTests: XCTestCase {
     func testValidatorSurfacesEveryRequiredValidationError() {
         let factory = FactoryCommandCatalog.commands[0]

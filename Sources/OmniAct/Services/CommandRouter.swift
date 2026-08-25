@@ -1,6 +1,7 @@
 import Foundation
 
-public final class CommandRouter: @unchecked Sendable {
+@MainActor
+public final class CommandRouter {
     private struct TokenCandidate {
         let command: SlashCommand
         let token: String
@@ -59,10 +60,17 @@ public final class CommandRouter: @unchecked Sendable {
         if let command = effectiveCommand {
             let argument = argument(for: command, in: rawInput)
             let targetText = !selectedText.isEmpty ? selectedText : argument
-            let prompt = command.promptTemplate
-                .replacingOccurrences(of: "{text}", with: targetText)
-                .replacingOccurrences(of: "{arg}", with: argument.isEmpty ? "default" : argument)
-            return (command.systemPrompt, prompt)
+            let interpolatedSystemPrompt = interpolate(
+                command.systemPrompt,
+                targetText: targetText,
+                argument: argument
+            )
+            let interpolatedPrompt = interpolate(
+                command.promptTemplate,
+                targetText: targetText,
+                argument: argument
+            )
+            return (interpolatedSystemPrompt, interpolatedPrompt)
         }
 
         let systemPrompt = "You are an intelligent macOS AI assistant. Directly output the requested answer without filler or conversational preambles."
@@ -75,6 +83,32 @@ public final class CommandRouter: @unchecked Sendable {
 
     private func argument(for command: SlashCommand, in input: String) -> String {
         tokenMatches(in: input).first(where: { $0.command.id == command.id })?.argument ?? ""
+    }
+
+    private func interpolate(_ template: String, targetText: String, argument: String) -> String {
+        var result = ""
+        var index = template.startIndex
+        let resolvedArgument = argument.isEmpty ? "default" : argument
+
+        while index < template.endIndex {
+            guard let opening = template[index...].firstIndex(of: "{") else {
+                result.append(contentsOf: template[index...])
+                break
+            }
+            result.append(contentsOf: template[index..<opening])
+            guard let closing = template[opening...].firstIndex(of: "}") else {
+                result.append(contentsOf: template[opening...])
+                break
+            }
+
+            switch template[opening...closing] {
+            case "{text}": result.append(contentsOf: targetText)
+            case "{arg}": result.append(contentsOf: resolvedArgument)
+            default: result.append(contentsOf: template[opening...closing])
+            }
+            index = template.index(after: closing)
+        }
+        return result
     }
 
     private func tokenMatches(in input: String) -> [(command: SlashCommand, argument: String)] {

@@ -19,6 +19,10 @@ struct SettingsTabPill: View {
             .foregroundColor(isSelected ? .white : .secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
+        .accessibilityHint("Opens \(title) settings")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -42,5 +46,7 @@ struct ProviderSelectPill: View {
             .foregroundColor(isSelected ? .white : .secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(title)
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
     }
 }

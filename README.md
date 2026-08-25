@@ -74,6 +74,12 @@ without regard to case. Only `{text}` (selected text, or typed text when none
 is selected) and `{arg}` (the text after the resolved command token) are valid
 placeholders. Disabled commands are not suggested or executed.
 
+For safe local loading, OmniAct considers at most 64 non-hidden command JSON
+files (in deterministic filename order), each up to 64 KiB. Symlinks,
+directories, oversized files, and invalid files are skipped individually with a
+local warning; stable IDs are limited to 100 UTF-8 bytes so their encoded file
+names remain portable.
+
 ## Package
 
 ```bash

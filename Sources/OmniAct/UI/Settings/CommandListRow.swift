@@ -26,10 +26,13 @@ struct CommandListRow: View {
                     Text(command.description).font(.system(size: 10.5)).foregroundColor(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Toggle("", isOn: Binding(get: { command.enabled }, set: onToggle))
+                Toggle("Enable \(command.title)", isOn: Binding(get: { command.enabled }, set: onToggle))
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.mini)
+                    .accessibilityLabel("\(command.title) enabled")
+                    .accessibilityValue(command.enabled ? "Enabled" : "Disabled")
+                    .accessibilityHint("Shows or hides this command in OmniAct")
             }
             HStack(spacing: 7) {
                 Text(state).font(.system(size: 10)).foregroundColor(.secondary)
@@ -37,14 +40,20 @@ struct CommandListRow: View {
                     Text("Aliases: \(command.displayAliases)").font(.system(size: 10)).foregroundColor(.secondary).lineLimit(1)
                 }
                 Spacer()
-                Button("↑") { onMove(-1) }.disabled(index == 0)
-                Button("↓") { onMove(1) }.disabled(index == count - 1)
-                Button("Edit", action: onEdit)
-                Button("Duplicate", action: onDuplicate)
+                Button("↑") { onMove(-1) }
+                    .disabled(index == 0)
+                    .accessibilityLabel("Move \(command.title) up")
+                    .accessibilityValue("Position \(index + 1) of \(count)")
+                Button("↓") { onMove(1) }
+                    .disabled(index == count - 1)
+                    .accessibilityLabel("Move \(command.title) down")
+                    .accessibilityValue("Position \(index + 1) of \(count)")
+                Button("Edit", action: onEdit).accessibilityLabel("Edit \(command.title)")
+                Button("Duplicate", action: onDuplicate).accessibilityLabel("Duplicate \(command.title)")
                 if command.origin == .factory {
-                    Button("Reset", action: onReset)
+                    Button("Reset", action: onReset).accessibilityLabel("Reset \(command.title)")
                 } else {
-                    Button("Delete", role: .destructive, action: onDelete)
+                    Button("Delete", role: .destructive, action: onDelete).accessibilityLabel("Delete \(command.title)")
                 }
             }
             .font(.system(size: 10.5))

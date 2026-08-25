@@ -1,6 +1,7 @@
 import XCTest
 @testable import OmniAct
 
+@MainActor
 final class CommandRouterBoundaryRegressionTests: XCTestCase {
     func testSlashTokenDoesNotMatchLongerToken() {
         let router = CommandRouter(catalog: MutableCommandCatalog(FactoryCommandCatalog.commands))
