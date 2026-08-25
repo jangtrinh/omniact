@@ -5,13 +5,12 @@ import SwiftUI
 public final class StatusBarController: NSObject {
     private var statusItem: NSStatusItem?
     private var hudPanel: HUDPanel?
-    private var viewModel = HUDViewModel()
+    private var viewModel: HUDViewModel?
     private var previousApp: NSRunningApplication?
 
     override public init() {
         super.init()
         setupStatusItem()
-        setupHUD()
         setupHotKey()
     }
 
@@ -39,6 +38,8 @@ public final class StatusBarController: NSObject {
     }
 
     private func setupHUD() {
+        guard hudPanel == nil else { return }
+        let viewModel = HUDViewModel()
         let panel = HUDPanel(contentRect: NSRect(x: 0, y: 0, width: 540, height: 300))
         let hostingView = NSHostingView(rootView: FloatingHUDView(viewModel: viewModel))
         panel.contentView = hostingView
@@ -57,6 +58,7 @@ public final class StatusBarController: NSObject {
             }
         }
 
+        self.viewModel = viewModel
         self.hudPanel = panel
     }
 
@@ -69,7 +71,8 @@ public final class StatusBarController: NSObject {
     }
 
     @objc public func toggleHUD() {
-        guard let panel = hudPanel else { return }
+        setupHUD()
+        guard let panel = hudPanel, let viewModel else { return }
 
         if panel.isVisible {
             viewModel.cancel()
@@ -79,7 +82,8 @@ public final class StatusBarController: NSObject {
     }
 
     public func showHUD() {
-        guard let panel = hudPanel else { return }
+        setupHUD()
+        guard let panel = hudPanel, let viewModel else { return }
 
         // Capture frontmost app BEFORE OmniAct gains focus
         let currentFrontApp = NSWorkspace.shared.frontmostApplication
@@ -98,7 +102,7 @@ public final class StatusBarController: NSObject {
     public func hideHUD(andReplace text: String? = nil) {
         hudPanel?.orderOut(nil)
         if text == nil {
-            viewModel.resetForDismissal()
+            viewModel?.resetForDismissal()
         }
 
         // Reactivate target app

@@ -1,104 +1,114 @@
 import SwiftUI
 
-struct SettingsSidebar: View {
-    @Binding var selection: SettingsSection
+struct SettingsToolbar: View {
+    let title: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("OMNIACT")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .accessibilityHidden(true)
-            VStack(spacing: 4) {
-                ForEach(SettingsSection.allCases) { section in
-                    navigationButton(for: section)
+        SettingsPalette.content
+            .accessibilityLabel(title)
+        .frame(width: SettingsDesignMetrics.contentWidth, height: SettingsDesignMetrics.toolbarHeight)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(SettingsPalette.separator).frame(height: 1)
+        }
+    }
+}
+
+struct SettingsMenuPicker<Option: Hashable>: View {
+    @Binding var selection: Option
+    let options: [Option]
+    let width: CGFloat
+    let label: (Option) -> String
+
+    var body: some View {
+        Menu {
+            ForEach(options, id: \.self) { option in
+                Button(label(option)) {
+                    selection = option
                 }
             }
-            Spacer()
-            Text("OmniAct 0.1")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, 8)
-        }
-        .padding(16)
-        .frame(width: 240)
-        .background(Color(nsColor: .underPageBackgroundColor).opacity(0.5))
-    }
-
-    private func navigationButton(for section: SettingsSection) -> some View {
-        let isSelected = selection == section
-        return Button {
-            selection = section
         } label: {
-            HStack(spacing: 11) {
-                Image(systemName: section.icon)
-                    .frame(width: 18)
-                Text(section.title)
-                    .font(.body.weight(isSelected ? .semibold : .regular))
-                Spacer()
-            }
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
-            .background(
-                isSelected ? Color.accentColor.opacity(0.22) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 8)
-            )
-            .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+            Color.clear
+                .frame(width: width, height: SettingsDesignMetrics.controlHeight)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(section.title)
-        .accessibilityValue(isSelected ? "Selected" : "Not selected")
-        .accessibilityHint("Opens \(section.title) settings")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .frame(width: width, height: SettingsDesignMetrics.controlHeight)
+        .background(SettingsPalette.control, in: RoundedRectangle(cornerRadius: 6))
+        .overlay {
+            HStack(spacing: 6) {
+                Text(label(selection))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundStyle(SettingsPalette.secondary)
+            }
+            .padding(.horizontal, 10)
+            .frame(width: width, height: SettingsDesignMetrics.controlHeight)
+            .allowsHitTesting(false)
 
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        }
+        .contentShape(Rectangle())
+        .accessibilityValue(label(selection))
+    }
 }
 
 struct SettingsCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(spacing: 0) {
-            content
-        }
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.62))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-        )
+        VStack(spacing: 0) { content }
+            .background(SettingsPalette.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(SettingsPalette.border, lineWidth: 0.5)
+            }
     }
 }
 
 struct SettingsRow<Content: View>: View {
     let title: String
     let detail: String?
+    let showsSeparator: Bool
     @ViewBuilder let content: Content
 
-    init(title: String, detail: String? = nil, @ViewBuilder content: () -> Content) {
+    init(
+        title: String,
+        detail: String? = nil,
+        showsSeparator: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.detail = detail
+        self.showsSeparator = showsSeparator
         self.content = content()
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 20) {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
-                    .font(.body)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(SettingsPalette.label)
                 if let detail {
                     Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Color(red: 129 / 255, green: 129 / 255, blue: 135 / 255))
                 }
             }
-            Spacer(minLength: 16)
+            Spacer(minLength: 8)
             content
         }
         .padding(.horizontal, 16)
-        .frame(minHeight: 60)
+        .frame(height: 60)
+        .overlay(alignment: .bottom) {
+            if showsSeparator {
+                Rectangle().fill(SettingsPalette.separator).frame(height: 1)
+            }
+        }
     }
 }
 
@@ -114,22 +124,29 @@ struct SettingsCallout: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundStyle(Color.accentColor)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(SettingsPalette.blue)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 3) {
                 if let title {
                     Text(title)
-                        .font(.callout.weight(.medium))
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(Color(red: 221 / 255, green: 238 / 255, blue: 1))
                 }
                 Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color(red: 146 / 255, green: 184 / 255, blue: 216 / 255))
             }
+            Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(.horizontal, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .background(SettingsPalette.blue.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(SettingsPalette.blue.opacity(0.16), lineWidth: 0.5)
+        }
     }
 }

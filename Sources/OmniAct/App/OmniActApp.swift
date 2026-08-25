@@ -9,6 +9,11 @@ struct OmniActApp: App {
         Settings {
             SettingsView()
         }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(
+            width: SettingsDesignMetrics.windowWidth,
+            height: SettingsDesignMetrics.contentLayoutHeight
+        )
         .windowResizability(.contentSize)
     }
 }
