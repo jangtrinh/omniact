@@ -86,9 +86,26 @@ names remain portable.
 bash scripts/bundle_app.sh
 ```
 
-The script creates an **unsigned** local `OmniAct.app` bundle. It is not a
-public distribution artifact: Developer ID signing, hardened runtime, and Apple
-notarization are still required.
+The default bundle is ad-hoc signed and passes structural signature verification,
+but macOS may treat each rebuild as a new Accessibility identity. For a stable
+local identity, select an installed Apple Development or Developer ID Application
+certificate. Prefer its 40-character hash because certificate names can repeat:
+
+```bash
+security find-identity -v -p codesigning
+OMNIACT_CODESIGN_IDENTITY="<certificate hash>" bash scripts/bundle_app.sh
+OMNIACT_CODESIGN_IDENTITY="<same certificate hash>" bash scripts/signing_identity_kill_test.sh
+```
+
+The kill-test builds twice and compares designated requirements. Reuse the same
+resolved identity and `com.omniact.macos` bundle identifier for continuity. It never
+resets, reads, or modifies the TCC database. After it passes, build the canonical
+bundle with that identity, grant Accessibility once, rebuild and replace it, then
+manually verify TextEdit capture and replacement. This owner-visible check is not
+automated.
+
+The local bundle is not a public distribution artifact: Developer ID signing with
+a secure timestamp and Apple notarization are still required.
 
 ## Source
 
@@ -96,6 +113,7 @@ notarization are still required.
 - [Application entry point](Sources/OmniAct/App/OmniActApp.swift)
 - [Tests](Tests/OmniActTests/OmniActTests.swift)
 - [Bundle script](scripts/bundle_app.sh)
+- [Signing identity kill-test](scripts/signing_identity_kill_test.sh)
 
 ## License
 

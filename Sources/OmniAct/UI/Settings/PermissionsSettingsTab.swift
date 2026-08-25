@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PermissionsSettingsTab: View {
     @State private var isAccessibilityGranted = false
+    @State private var signingIdentity = AppSigningIdentityStatus.current()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -19,14 +20,11 @@ struct PermissionsSettingsTab: View {
                     detail: accessibilityDetail
                 ) {
                     HStack(spacing: 10) {
-                        Label(
-                            isAccessibilityGranted ? "Granted" : "Required",
-                            systemImage: isAccessibilityGranted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                        )
+                        Label(readiness.statusLabel, systemImage: statusIcon)
                         .font(.callout.weight(.medium))
-                        .foregroundStyle(isAccessibilityGranted ? Color.green : Color.orange)
+                        .foregroundStyle(statusColor)
                         if !isAccessibilityGranted {
-                            Button("Grant Access") {
+                            Button(readiness.actionTitle) {
                                 AccessibilityService.shared.requestAccessibilityPermission()
                             }
                             .buttonStyle(.borderedProminent)
@@ -48,8 +46,10 @@ struct PermissionsSettingsTab: View {
             }
             SettingsCallout(
                 icon: "hand.raised.fill",
-                title: "Why OmniAct asks",
-                message: "Accessibility lets OmniAct read selected text and insert a response in the active app."
+                title: readiness.hasStableSigningIdentity ? "Why OmniAct asks" : "Build identity requires attention",
+                message: readiness.hasStableSigningIdentity
+                    ? "Accessibility allows OmniAct to request text and simulated input. Compatibility depends on the active app."
+                    : readiness.detail
             )
         }
         .onAppear(perform: refreshAccessibility)
@@ -59,12 +59,31 @@ struct PermissionsSettingsTab: View {
     }
 
     private var accessibilityDetail: String {
-        isAccessibilityGranted
-            ? "OmniAct can read selected text and replace it inline."
-            : "Required to read selected text and insert responses."
+        readiness.detail
+    }
+
+    private var readiness: AccessibilityPermissionReadiness {
+        AccessibilityPermissionReadiness(
+            isAccessibilityGranted: isAccessibilityGranted,
+            signingIdentity: signingIdentity
+        )
+    }
+
+    private var statusIcon: String {
+        switch readiness.state {
+        case .granted:
+            "checkmark.circle.fill"
+        case .grantedForCurrentBuild, .notGranted, .unstableBuildIdentity:
+            "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var statusColor: Color {
+        readiness.state == .granted ? .green : .orange
     }
 
     private func refreshAccessibility() {
         isAccessibilityGranted = AccessibilityService.shared.isAccessibilityGranted
+        signingIdentity = AppSigningIdentityStatus.current()
     }
 }
