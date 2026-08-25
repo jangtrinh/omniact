@@ -7,7 +7,6 @@ public final class StatusBarController: NSObject {
     private var hudPanel: HUDPanel?
     private var viewModel = HUDViewModel()
     private var previousApp: NSRunningApplication?
-    private var settingsWindow: NSWindow?
 
     override public init() {
         super.init()
@@ -128,24 +127,19 @@ public final class StatusBarController: NSObject {
     }
 
     @objc private func openSettings() {
-        if settingsWindow == nil {
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 590, height: 500),
-                styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "OmniAct Preferences"
-            window.titlebarAppearsTransparent = true
-            window.isMovableByWindowBackground = true
-            window.isReleasedWhenClosed = false
-            window.center()
-            window.contentView = NSHostingView(rootView: SettingsView())
-            self.settingsWindow = window
-        }
-
-        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        guard let settingsItem = NSApp.mainMenu?
+            .items
+            .compactMap(\.submenu)
+            .flatMap(\.items)
+            .first(where: { $0.keyEquivalent == "," }),
+              let action = settingsItem.action else {
+            NSSound.beep()
+            return
+        }
+        if !NSApp.sendAction(action, to: settingsItem.target, from: settingsItem) {
+            NSSound.beep()
+        }
     }
 
     @objc private func quitApp() {
