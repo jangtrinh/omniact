@@ -15,6 +15,7 @@ private final class InMemoryAPIKeyStorage: APIKeyStorage, @unchecked Sendable {
     }
 }
 
+@MainActor
 final class OmniActTests: XCTestCase {
     func testCommandRouterMatching() {
         let router = CommandRouter.shared

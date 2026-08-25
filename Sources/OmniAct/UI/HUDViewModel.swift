@@ -21,6 +21,7 @@ public final class HUDViewModel: ObservableObject {
     }
     @Published public var statusMessage: String = ""
     @Published public var matchedCommands: [SlashCommand] = []
+    @Published public internal(set) var autocompleteSelectionIndex: Int?
     @Published public var selectedCommand: SlashCommand? = nil
     @Published public var config: LLMConfiguration = LLMConfiguration()
 
@@ -28,14 +29,26 @@ public final class HUDViewModel: ObservableObject {
         didSet { onContentSizeChange?() }
     }
 
+    private let commandStore: CommandStore
+    let commandRouter: CommandRouter
+    private var commandSubscription: AnyCancellable?
     private var streamTask: Task<Void, Never>?
     public var onDismiss: (() -> Void)?
     public var onAcceptAndReplace: ((String) -> Void)?
     public var onContentSizeChange: (() -> Void)?
 
-    public init() {
+    public init(commandStore: CommandStore? = nil, router: CommandRouter? = nil) {
+        let resolvedStore = commandStore ?? CommandStore.shared
+        self.commandStore = resolvedStore
+        self.commandRouter = router ?? CommandRouter(catalog: resolvedStore)
         loadSavedConfig()
         updateCommandMatching()
+        commandSubscription = resolvedStore.$commands
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.commandCatalogDidChange()
+            }
     }
 
     public func setContext(_ context: AXContext) {
@@ -52,32 +65,29 @@ public final class HUDViewModel: ObservableObject {
         onContentSizeChange?()
     }
 
-    private func updateCommandMatching() {
+    func updateCommandMatching() {
         if inputText.hasPrefix("/") {
-            matchedCommands = CommandRouter.shared.matchCommands(query: inputText)
+            matchedCommands = commandRouter.matchCommands(query: inputText)
         } else {
-            matchedCommands = CommandRouter.shared.builtInCommands
+            matchedCommands = commandRouter.commands
         }
-    }
-
-    public func selectCommand(_ cmd: SlashCommand) {
-        self.selectedCommand = cmd
-        self.inputText = "\(cmd.command) "
-        execute()
-    }
-
-    public func runQuickCommand(_ cmdString: String) {
-        self.inputText = cmdString
-        let cmd = CommandRouter.shared.builtInCommands.first { cmdString.hasPrefix($0.command) }
-        self.selectedCommand = cmd
-        execute()
+        autocompleteSelectionIndex = matchedCommands.isEmpty ? nil : 0
     }
 
     public func execute() {
         guard !isStreaming else { return }
 
-        let cmd = selectedCommand ?? CommandRouter.shared.resolveCommand(from: inputText).0
-        let (sysPrompt, userPrompt) = CommandRouter.shared.buildPrompt(
+        let liveSelectedCommand = selectedCommand.flatMap { selected in
+            commandRouter.commands.first { $0.id == selected.id }
+        }
+        if selectedCommand != nil && liveSelectedCommand == nil {
+            selectedCommand = nil
+            errorMessage = "That command is no longer enabled. Choose another command."
+            statusMessage = ""
+            return
+        }
+        let cmd = liveSelectedCommand ?? commandRouter.resolveCommand(from: inputText).0
+        let (sysPrompt, userPrompt) = commandRouter.buildPrompt(
             command: cmd,
             rawInput: inputText,
             selectedText: selectedText
@@ -157,4 +167,5 @@ public final class HUDViewModel: ObservableObject {
         streamTask = nil
         isStreaming = false
     }
+
 }
