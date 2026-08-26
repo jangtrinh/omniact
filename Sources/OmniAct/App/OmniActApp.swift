@@ -1,5 +1,5 @@
+import AppKit
 import SwiftUI
-import Cocoa
 
 @main
 struct OmniActApp: App {
@@ -7,14 +7,28 @@ struct OmniActApp: App {
 
     var body: some Scene {
         Settings {
-            SettingsView()
+            SettingsWindowRoot()
         }
-        .windowStyle(.hiddenTitleBar)
         .defaultSize(
             width: SettingsDesignMetrics.windowWidth,
-            height: SettingsDesignMetrics.contentLayoutHeight
+            height: SettingsDesignMetrics.windowHeight
         )
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: true))
+    }
+}
+
+private struct SettingsWindowRoot: View {
+    @ViewBuilder
+    var body: some View {
+        if #available(macOS 15.0, *) {
+            SettingsView()
+                .windowMinimizeBehavior(.enabled)
+                .windowResizeBehavior(.enabled)
+                .windowFullScreenBehavior(.enabled)
+        } else {
+            SettingsView()
+        }
     }
 }
 

@@ -1,63 +1,78 @@
 import SwiftUI
 
 struct ModelSettingsForm: View {
+    private enum Field: Hashable {
+        case apiKey
+        case baseURL
+    }
+
     @ObservedObject var model: ModelSettingsViewModel
     @Binding var isEditingAPIKey: Bool
+    @FocusState private var focusedField: Field?
 
     var body: some View {
-        SettingsCard {
-            SettingsRow(title: "Provider", detail: providerDetail, showsSeparator: true) {
-                SettingsMenuPicker(
-                    selection: providerBinding,
-                    options: LLMProviderType.allCases,
-                    width: 165,
-                    label: \.rawValue
-                )
-                .accessibilityLabel("Provider")
+        Group {
+            LabeledContent {
+                Picker("Provider", selection: providerBinding) {
+                    ForEach(LLMProviderType.allCases, id: \.self) { provider in
+                        Text(provider.rawValue).tag(provider)
+                    }
+                }
+                .labelsHidden()
+                .frame(width: SettingsDesignMetrics.controlWidth)
+            } label: {
+                SettingsRowLabel("Provider", detail: providerDetail)
             }
 
-            SettingsRow(
-                title: model.provider == .ollama ? "Ollama host key" : "API key",
-                detail: model.provider == .ollama
-                    ? "Optional for a local server"
-                    : "Stored securely in macOS Keychain",
-                showsSeparator: true
-            ) {
+            LabeledContent {
                 HStack(spacing: 8) {
                     apiKeyField
                     Button(isEditingAPIKey ? "Done" : "Update…") {
                         isEditingAPIKey.toggle()
                     }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.roundedRectangle(radius: 7))
-                    .controlSize(.small)
-                    .frame(width: 68, height: SettingsDesignMetrics.actionHeight)
+                    .accessibilityLabel(isEditingAPIKey ? "Finish editing API key" : "Update API key")
                 }
+            } label: {
+                SettingsRowLabel(
+                    model.provider == .ollama ? "Ollama host key" : "API key",
+                    detail: model.provider == .ollama
+                        ? "Optional for a local server"
+                        : "Stored securely in macOS Keychain"
+                )
             }
 
-            SettingsRow(title: "API base URL", showsSeparator: true) {
+            LabeledContent("API base URL") {
                 TextField("https://…", text: $model.baseURL)
-                    .settingsField(width: 270)
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: SettingsDesignMetrics.controlWidth)
+                    .focused($focusedField, equals: .baseURL)
                     .accessibilityLabel("API base URL")
             }
 
-            SettingsRow(title: "Selected model", showsSeparator: true) {
-                modelMenu
+            LabeledContent("Selected model") {
+                modelPicker
             }
 
-            SettingsRow(title: "Creativity", detail: "Balanced") {
-                HStack(spacing: 6) {
-                    Slider(value: roundedTemperature, in: 0...1)
-                        .controlSize(.mini)
-                        .frame(width: 168)
+            LabeledContent {
+                HStack(spacing: 8) {
+                    Slider(value: roundedTemperature, in: 0...1, step: 0.1)
                         .accessibilityLabel("Creativity")
                         .accessibilityValue(temperatureLabel)
                     Text(temperatureLabel)
-                        .font(.system(size: 11.5, weight: .medium).monospacedDigit())
-                        .foregroundStyle(Color(red: 197 / 255, green: 197 / 255, blue: 202 / 255))
-                        .frame(width: 26, alignment: .trailing)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, alignment: .trailing)
                 }
-                .frame(width: 250, alignment: .leading)
+                .frame(width: SettingsDesignMetrics.controlWidth)
+            } label: {
+                SettingsRowLabel("Creativity", detail: creativityLabel)
+            }
+        }
+        .onAppear {
+            Task { @MainActor in
+                await Task.yield()
+                focusedField = nil
             }
         }
     }
@@ -66,38 +81,27 @@ struct ModelSettingsForm: View {
     private var apiKeyField: some View {
         if isEditingAPIKey {
             SecureField("Paste API key", text: $model.apiKey)
-                .settingsField(width: 174)
+                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 160)
+                .focused($focusedField, equals: .apiKey)
                 .accessibilityLabel("API key")
         } else {
-            Text(model.apiKey.isEmpty ? "Not set" : "••••••••••••••••")
-                .font(.system(size: 12))
-                .foregroundStyle(
-                    model.apiKey.isEmpty
-                        ? SettingsPalette.secondary
-                        : Color(red: 217 / 255, green: 217 / 255, blue: 221 / 255)
-                )
-                .padding(.horizontal, 10)
-                .frame(
-                    width: 174,
-                    height: SettingsDesignMetrics.controlHeight,
-                    alignment: .leading
-                )
-                .background(SettingsPalette.field, in: RoundedRectangle(cornerRadius: 6))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                }
+            Text(model.apiKey.isEmpty ? "Not set" : "••••••••••••")
+                .foregroundStyle(.secondary)
+                .frame(width: 160, alignment: .leading)
                 .accessibilityLabel(model.apiKey.isEmpty ? "API key not set" : "API key saved")
         }
     }
 
-    private var modelMenu: some View {
-        SettingsMenuPicker(
-            selection: $model.modelName,
-            options: displayedModels,
-            width: 250,
-            label: { $0 }
-        )
+    private var modelPicker: some View {
+        Picker("Selected model", selection: $model.modelName) {
+            ForEach(displayedModels, id: \.self) { name in
+                Text(name).tag(name)
+            }
+        }
+        .labelsHidden()
+        .frame(width: SettingsDesignMetrics.controlWidth)
         .contextMenu {
             Button("Detect Available Models", systemImage: "arrow.triangle.2.circlepath") {
                 model.autoDetectModels()
@@ -143,21 +147,15 @@ struct ModelSettingsForm: View {
         }
     }
 
+    private var creativityLabel: String {
+        switch model.temperature {
+        case ..<0.3: "Precise"
+        case 0.7...: "Creative"
+        default: "Balanced"
+        }
+    }
+
     private var temperatureLabel: String {
         String(format: "%.1f", model.temperature)
-    }
-}
-
-private extension View {
-    func settingsField(width: CGFloat) -> some View {
-        textFieldStyle(.plain)
-            .font(.system(size: 12))
-            .padding(.horizontal, 10)
-            .frame(width: width, height: SettingsDesignMetrics.controlHeight)
-            .background(SettingsPalette.field, in: RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            }
     }
 }

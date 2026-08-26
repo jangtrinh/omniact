@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ModelSettingsTab: View {
@@ -5,81 +6,100 @@ struct ModelSettingsTab: View {
     @State private var isEditingAPIKey = false
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            SettingsPalette.content
-
-            Text("Model provider")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(SettingsPalette.primary)
-                .offset(x: 28, y: 22)
-
-            Text("Choose where OmniAct runs requests and which model powers the HUD.")
-                .font(.system(size: 12.5))
-                .foregroundStyle(SettingsPalette.secondary)
-                .offset(x: 28, y: 52)
-
-            ModelSettingsForm(model: model, isEditingAPIKey: $isEditingAPIKey)
-                .frame(
-                    width: SettingsDesignMetrics.formWidth,
-                    height: SettingsDesignMetrics.formHeight
-                )
-                .offset(x: 28, y: 92)
-
-            SettingsCallout(
-                icon: "shield.lefthalf.filled",
-                title: "Credentials stay on this Mac",
-                message: "API keys are never shown again after saving and are not included in logs."
-            )
-            .frame(width: SettingsDesignMetrics.formWidth, height: 58)
-            .offset(x: 28, y: 410)
-
-            Text(actionHint)
-                .font(.system(size: 11))
-                .foregroundStyle(actionHintColor)
-                .lineLimit(1)
-                .frame(width: 330, alignment: .leading)
-                .offset(x: 28, y: 500)
-
-            actionButtons.offset(x: 382, y: 492)
+        Form {
+            Section {
+                ModelSettingsForm(model: model, isEditingAPIKey: $isEditingAPIKey)
+            } header: {
+                Text("Model provider")
+            } footer: {
+                Text("API keys stay in macOS Keychain. Cloud requests go only to the selected provider.")
+            }
         }
-        .frame(
-            width: SettingsDesignMetrics.contentWidth,
-            height: SettingsDesignMetrics.contentHeight
-        )
+        .formStyle(.grouped)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionBar
+        }
         .onAppear { model.load() }
+        .onChange(of: model.apiKey) { _, _ in model.markConfigurationChanged() }
+        .onChange(of: model.baseURL) { _, _ in model.markConfigurationChanged() }
+        .onChange(of: model.modelName) { _, _ in model.markConfigurationChanged() }
+        .onChange(of: model.temperature) { _, _ in model.markConfigurationChanged() }
     }
 
-    private var actionButtons: some View {
-        HStack(spacing: 10) {
-            Button(model.isTesting ? "Testing…" : "Test Connection") {
+    private var actionBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    status
+                    Spacer(minLength: 12)
+                    actions
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    status
+                    HStack {
+                        Spacer()
+                        actions
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var status: some View {
+        ModelSettingsStatusView(status: model.status)
+            .frame(minHeight: 20)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 8) {
+            Button("Test Connection") {
                 model.testConnection()
             }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.roundedRectangle(radius: 7))
-            .controlSize(.small)
-            .frame(width: 116, height: SettingsDesignMetrics.actionHeight)
             .disabled(model.isTesting)
+            .accessibilityLabel(model.isTesting ? "Testing connection" : "Test Connection")
 
             Button("Save Changes") {
                 model.save()
                 isEditingAPIKey = false
             }
             .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.roundedRectangle(radius: 7))
-            .controlSize(.small)
-            .tint(SettingsPalette.blue)
-            .frame(width: 124, height: SettingsDesignMetrics.actionHeight)
+            .keyboardShortcut(.defaultAction)
+            .accessibilityLabel("Save Changes")
         }
     }
+}
 
-    private var actionHint: String {
-        model.result ?? "Validate this provider before saving."
+private struct ModelSettingsStatusView: View {
+    let status: ModelSettingsStatus
+
+    var body: some View {
+        let presentation = status.presentation
+        HStack(spacing: 7) {
+            if presentation.showsProgress {
+                ProgressView()
+                    .controlSize(.small)
+            } else if let symbol = presentation.symbol {
+                Image(systemName: symbol)
+                    .foregroundStyle(toneColor)
+                    .accessibilityHidden(true)
+            }
+            Text(presentation.message)
+                .font(.callout)
+                .foregroundStyle(toneColor)
+                .lineLimit(2)
+        }
+        .accessibilityElement(children: .combine)
     }
 
-    private var actionHintColor: Color {
-        guard let result = model.result else { return SettingsPalette.tertiary }
-        if result.contains("✓") { return SettingsPalette.connected }
-        if result.contains("✗") { return .orange }
-        return SettingsPalette.tertiary
+    private var toneColor: Color {
+        switch status.presentation.tone {
+        case .secondary: .secondary
+        case .success: .green
+        case .warning: .orange
+        }
     }
 }
