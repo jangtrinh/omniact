@@ -30,30 +30,24 @@ public struct SettingsView: View {
     public init() {}
 
     public var body: some View {
-        HStack(spacing: 0) {
+        NavigationSplitView {
             SettingsSidebar(selection: $selectedSection)
-            VStack(spacing: 0) {
-                SettingsToolbar(title: selectedSection.title)
-                sectionContent
-            }
-            .frame(
-                width: SettingsDesignMetrics.contentWidth,
-                height: SettingsDesignMetrics.windowHeight
-            )
-            .background(SettingsPalette.content)
+                .navigationSplitViewColumnWidth(
+                    min: SettingsDesignMetrics.sidebarMinimumWidth,
+                    ideal: SettingsDesignMetrics.sidebarIdealWidth,
+                    max: SettingsDesignMetrics.sidebarMaximumWidth
+                )
+                .toolbar(removing: .sidebarToggle)
+        } detail: {
+            sectionContent
+                .frame(minWidth: SettingsDesignMetrics.detailMinimumWidth)
+                .navigationTitle(selectedSection.title)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(
-            width: SettingsDesignMetrics.windowWidth,
-            height: SettingsDesignMetrics.windowHeight
+            minWidth: SettingsDesignMetrics.windowMinimumWidth,
+            minHeight: SettingsDesignMetrics.windowMinimumHeight
         )
-        .background(SettingsPalette.content)
-        .background(SettingsWindowConfigurator(sectionTitle: selectedSection.title))
-        .ignoresSafeArea(.container, edges: .top)
-        .frame(
-            width: SettingsDesignMetrics.windowWidth,
-            height: SettingsDesignMetrics.contentLayoutHeight
-        )
-        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -62,24 +56,9 @@ public struct SettingsView: View {
         case .models:
             ModelSettingsTab()
         case .permissions:
-            settingsScroll { PermissionsSettingsTab() }
+            PermissionsSettingsTab()
         case .commands:
-            settingsScroll { CommandLibraryView() }
+            CommandLibraryView()
         }
-    }
-
-    private func settingsScroll<Content: View>(
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        ScrollView {
-            content()
-                .padding(.horizontal, 28)
-                .padding(.vertical, 24)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .frame(
-            width: SettingsDesignMetrics.contentWidth,
-            height: SettingsDesignMetrics.contentHeight
-        )
     }
 }

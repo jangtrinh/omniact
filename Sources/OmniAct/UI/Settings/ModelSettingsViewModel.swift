@@ -11,33 +11,35 @@ final class ModelSettingsViewModel: ObservableObject {
     @Published var isTesting = false
     @Published var isDetecting = false
     @Published var fetchedModels: [String] = []
-    @Published var result: String?
+    @Published private(set) var status: ModelSettingsStatus = .idle
 
     func load() {
         provider = AppConfig.shared.activeProvider
         loadProviderValues()
+        status = .idle
     }
 
     func selectProvider(_ type: LLMProviderType) {
         provider = type
         loadProviderValues()
         fetchedModels = []
+        status = .idle
     }
 
     func save() {
-        AppConfig.shared.saveConfiguration(
-            provider: provider,
-            baseURL: baseURL,
-            modelName: modelName,
-            apiKey: apiKey.isEmpty ? nil : apiKey
-        )
-        result = "✓ Settings Saved (Active: \(modelName))"
+        persistConfiguration()
+        status = .saved
+    }
+
+    func markConfigurationChanged() {
+        guard !isTesting, !isDetecting else { return }
+        status = .idle
     }
 
     func autoDetectModels() {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         isDetecting = true
-        result = "Detecting models..."
+        status = .detectingModels
         let url = baseURL
         Task {
             if let models = try? await LLMClient.shared.fetchAvailableModels(baseURL: url, apiKey: key), !models.isEmpty {
@@ -46,18 +48,18 @@ final class ModelSettingsViewModel: ObservableObject {
                     modelName = models.contains("openai/gpt-oss-20b") ? "openai/gpt-oss-20b" : (models.first ?? modelName)
                 }
                 isDetecting = false
-                result = "✓ Validated (\(models.count) models available)"
-                save()
+                persistConfiguration()
+                status = .modelsDetected(count: models.count)
             } else {
                 isDetecting = false
-                result = "✗ Could not auto-detect with this key"
+                status = .failed(message: "Could not detect models with this key")
             }
         }
     }
 
     func testConnection() {
         isTesting = true
-        result = "Testing..."
+        status = .testing(providerName: provider.rawValue)
         let configuration = LLMConfiguration(
             providerType: provider,
             baseURL: baseURL,
@@ -77,12 +79,23 @@ final class ModelSettingsViewModel: ObservableObject {
                     response += chunk
                 }
                 isTesting = false
-                result = "✓ Connected (\(response.trimmingCharacters(in: .whitespacesAndNewlines)))"
+                status = response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? .failed(message: "The provider returned an empty response")
+                    : .connected
             } catch {
                 isTesting = false
-                result = "✗ \(error.localizedDescription)"
+                status = .failed(message: error.localizedDescription)
             }
         }
+    }
+
+    private func persistConfiguration() {
+        AppConfig.shared.saveConfiguration(
+            provider: provider,
+            baseURL: baseURL,
+            modelName: modelName,
+            apiKey: apiKey.isEmpty ? nil : apiKey
+        )
     }
 
     private func loadProviderValues() {

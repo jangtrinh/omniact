@@ -2,23 +2,30 @@ import XCTest
 @testable import OmniAct
 
 final class SettingsDesignMetricsTests: XCTestCase {
-    func testFigmaWindowAndPaneGeometry() {
-        XCTAssertEqual(SettingsDesignMetrics.windowWidth, 900)
-        XCTAssertEqual(SettingsDesignMetrics.windowHeight, 600)
-        XCTAssertEqual(SettingsDesignMetrics.nativeTitlebarHeight, 32)
-        XCTAssertEqual(SettingsDesignMetrics.contentLayoutHeight, 568)
-        XCTAssertEqual(SettingsDesignMetrics.sidebarWidth, 240)
-        XCTAssertEqual(SettingsDesignMetrics.contentWidth, 660)
-        XCTAssertEqual(SettingsDesignMetrics.toolbarHeight, 52)
-        XCTAssertEqual(SettingsDesignMetrics.contentHeight, 548)
+    func testNativeSettingsWindowAndColumnGeometry() {
+        XCTAssertEqual(SettingsDesignMetrics.windowWidth, 820)
+        XCTAssertEqual(SettingsDesignMetrics.windowHeight, 540)
+        XCTAssertEqual(SettingsDesignMetrics.windowMinimumWidth, 740)
+        XCTAssertEqual(SettingsDesignMetrics.windowMinimumHeight, 520)
+        XCTAssertEqual(SettingsDesignMetrics.sidebarMinimumWidth, 200)
+        XCTAssertEqual(SettingsDesignMetrics.sidebarIdealWidth, 240)
+        XCTAssertEqual(SettingsDesignMetrics.sidebarMaximumWidth, 280)
+        XCTAssertEqual(SettingsDesignMetrics.detailMinimumWidth, 460)
     }
 
-    func testFigmaSidebarAndFormGeometry() {
-        XCTAssertEqual(SettingsDesignMetrics.navigationRowWidth, 212)
-        XCTAssertEqual(SettingsDesignMetrics.navigationRowHeight, 30)
-        XCTAssertEqual(SettingsDesignMetrics.formWidth, 604)
-        XCTAssertEqual(SettingsDesignMetrics.formHeight, 300)
-        XCTAssertEqual(SettingsDesignMetrics.controlHeight, 28)
-        XCTAssertEqual(SettingsDesignMetrics.actionHeight, 30)
+    func testNativeSettingsProportionsMatchSystemSettingsReference() {
+        XCTAssertEqual(
+            SettingsDesignMetrics.windowWidth - SettingsDesignMetrics.sidebarIdealWidth,
+            580
+        )
+        XCTAssertGreaterThanOrEqual(
+            SettingsDesignMetrics.windowMinimumWidth - SettingsDesignMetrics.sidebarMaximumWidth,
+            SettingsDesignMetrics.detailMinimumWidth
+        )
+        XCTAssertLessThanOrEqual(
+            SettingsDesignMetrics.sidebarIdealWidth / SettingsDesignMetrics.windowWidth,
+            0.31
+        )
+        XCTAssertEqual(SettingsDesignMetrics.controlWidth, 240)
     }
 }
